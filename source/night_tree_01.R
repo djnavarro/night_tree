@@ -4,14 +4,17 @@
 library(here)
 library(tidyverse)
 library(Rcpp)
+library(flametree)
+library(ggforce)
 
 
-# assign system identifiers and source C++ code ---------------------------
+# constants ---------------------------------------------------------------
 
 seed <- 100
 system_id <- "01"
 system_name <- "night_tree"
 background <- "black"
+tree_shade <- "white"
 resolution <- 3000
 dpi <- 300
 
@@ -41,33 +44,66 @@ generate_nebula <- function(n, seed) {
   return(nebula_data)
 }
 
+generate_tree <- function(n, seed) {
+  tree_data <- flametree_grow(
+    seed = seed,
+    time = n,
+    scale = c(0.6, 0.9, 0.9)
+  ) %>%
+    mutate(
+      coord_x = 0.7 + coord_x / 10,
+      coord_y = coord_y / 8
+    )
+  return(tree_data)
+}
+
 
 # create data etc ---------------------------------------------------------
 
 nebula_shades <- generate_shades(4, seed)
 nebula_data <- generate_nebula(1000000, seed)
-
+tree_data <- generate_tree(10, seed)
 
 
 # create ggplot object ----------------------------------------------------
 
-pic <- nebula_data %>%
-  ggplot(aes(
-    x = x0,
-    y = y0,
-    xend = x1,
-    yend = y1,
-    colour = shade
-  )) +
-  geom_segment(show.legend = FALSE, size = .1, alpha = .1) +
+pic <- ggplot() +
+  geom_segment(
+    data = nebula_data,
+    mapping = aes(
+      x = x0,
+      y = y0,
+      xend = x1,
+      yend = y1,
+      colour = shade
+    ),
+    show.legend = FALSE,
+    size = .1,
+    alpha = .1
+  ) +
+  geom_bezier(
+    data = tree_data,
+    mapping = aes(
+      x = coord_x,
+      y = coord_y,
+      size = seg_wid * 6,
+      group = id_path
+    ),
+    colour = tree_shade,
+    show.legend = FALSE,
+    lineend = "round",
+    alpha = 1
+  ) +
   theme_void() +
   theme(panel.background = element_rect(
     fill = background,
     colour = background
   )) +
-  scale_x_continuous(limits = c(0, 1), expand = c(0, 0)) +
-  scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
   scale_color_gradientn(colours = nebula_shades) +
+  scale_size_identity() +
+  coord_cartesian(xlim = c(0, 1), ylim = c(0, 1)) +
   NULL
 
 
