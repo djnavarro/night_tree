@@ -10,11 +10,12 @@ library(ggforce)
 
 # constants ---------------------------------------------------------------
 
-seed <- 100
+seed <- 105
 system_id <- "01"
 system_name <- "night_tree"
-background <- "black"
-tree_shade <- "white"
+background <- "#32383D"
+tree_shade <- "black"
+leaf_shade <- "black"
 resolution <- 3000
 dpi <- 300
 
@@ -48,11 +49,12 @@ generate_tree <- function(n, seed) {
   tree_data <- flametree_grow(
     seed = seed,
     time = n,
-    scale = c(0.6, 0.9, 0.9)
+    scale = c(0.6, 0.9, 0.9),
+    angle = c(10, -10, -20)
   ) %>%
     mutate(
-      coord_x = 0.7 + coord_x / 10,
-      coord_y = coord_y / 8
+      coord_x = 0.4 + coord_x / 6,
+      coord_y = coord_y / 6
     )
   return(tree_data)
 }
@@ -60,16 +62,18 @@ generate_tree <- function(n, seed) {
 
 # create data etc ---------------------------------------------------------
 
-nebula_shades <- generate_shades(4, seed)
-nebula_data <- generate_nebula(1000000, seed)
-tree_data <- generate_tree(10, seed)
+nebula_shades <- generate_shades(8, seed)
+nebula_data <- generate_nebula(8000000, seed)
+tree_data <- generate_tree(14, seed)
+leaf_data <- tree_data %>% filter(id_time >= 13)
+
 
 
 # create ggplot object ----------------------------------------------------
 
 pic <- ggplot() +
   geom_segment(
-    data = nebula_data,
+    data = nebula_data,  # draw nebula first
     mapping = aes(
       x = x0,
       y = y0,
@@ -79,10 +83,10 @@ pic <- ggplot() +
     ),
     show.legend = FALSE,
     size = .1,
-    alpha = .1
+    alpha = .2
   ) +
   geom_bezier(
-    data = tree_data,
+    data = tree_data,  # draw tree trunk next
     mapping = aes(
       x = coord_x,
       y = coord_y,
@@ -94,6 +98,17 @@ pic <- ggplot() +
     lineend = "round",
     alpha = 1
   ) +
+  geom_point(
+    data = leaf_data,  # add leaves last
+    mapping = aes(
+      x = coord_x,
+      y = coord_y
+    ),
+    size = 1,
+    colour = leaf_shade,
+    stroke = 0,
+    show.legend = FALSE
+  ) +
   theme_void() +
   theme(panel.background = element_rect(
     fill = background,
@@ -103,7 +118,7 @@ pic <- ggplot() +
   scale_y_continuous(expand = c(0, 0)) +
   scale_color_gradientn(colours = nebula_shades) +
   scale_size_identity() +
-  coord_cartesian(xlim = c(0, 1), ylim = c(0, 1)) +
+  coord_cartesian(xlim = c(.1, 1), ylim = c(.1, 1)) +
   NULL
 
 
